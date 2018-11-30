@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DAX Lambda Cluster Setup
+Resources:
+  # VPC Information
+  VPC:
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+    Type: AWS::EC2::VPC
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  PrivateSubnetAz1:
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref: 'AWS::Region'
+      CidrBlock: 10.0.32.0/20
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  PrivateSubnetAz2:
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref: 'AWS::Region'
+      CidrBlock: 10.0.48.0/20
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  PublicRoute:
+    DependsOn: AttachGateway
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: PublicRouteTable
+    Type: AWS::EC2::Route
+  PublicRouteTable:
+    Properties:
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::RouteTable
+  PublicSubnetAz1:
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs:
+              Ref: 'AWS::Region'
+      CidrBlock: 10.0.0.0/20
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  PublicSubnetAz2:
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs:
+              Ref: 'AWS::Region'
+      CidrBlock: 10.0.16.0/20
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  SecurityGroup:
+    Properties:
+      GroupDescription: Security group
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: '8111'
+          IpProtocol: tcp
+          ToPort: '8111'
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::SecurityGroup
+  SubnetRouteAssociationAz1:
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      SubnetId:
+        Ref: PublicSubnetAz1
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  SubnetRouteAssociationAz2:
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      SubnetId:
+        Ref: PublicSubnetAz2
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  AZ1NatGateway:
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - AZ1NatIp
+          - AllocationId
+      SubnetId:
+        Ref: PublicSubnetAz1
+    Type: AWS::EC2::NatGateway
+  AZ1NatIp:
+    Properties:
+      Domain: vpc
+    Type: AWS::EC2::EIP
+  AZ1NatRoute:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: AZ1NatGateway
+      RouteTableId:
+        Ref: AZ1NatRouteTable
+    Type: AWS::EC2::Route
+  AZ1NatRouteTable:
+    Properties:
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::RouteTable
+  AZ1PrivateSubnetRouteTableAssociation:
+    Properties:
+      RouteTableId:
+        Ref: AZ1NatRouteTable
+      SubnetId:
+        Ref: PrivateSubnetAz1
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  AZ2NatGateway:
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - AZ2NatIp
+          - AllocationId
+      SubnetId:
+        Ref: PublicSubnetAz2
+    Type: AWS::EC2::NatGateway
+  AZ2NatIp:
+    Properties:
+      Domain: vpc
+    Type: AWS::EC2::EIP
+  AZ2NatRoute:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: AZ2NatGateway
+      RouteTableId:
+        Ref: AZ2NatRouteTable
+    Type: AWS::EC2::Route
+  AZ2NatRouteTable:
+    Properties:
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::RouteTable
+  AZ2PrivateSubnetRouteTableAssociation:
+    Properties:
+      RouteTableId:
+        Ref: AZ2NatRouteTable
+      SubnetId:
+        Ref: PrivateSubnetAz2
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  AttachGateway:
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::VPCGatewayAttachment
+Transform: AWS::Serverless-2016-10-31
