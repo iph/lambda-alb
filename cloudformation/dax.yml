@@ -171,4 +171,14 @@ Resources:
       VpcId:
         Ref: VPC
     Type: AWS::EC2::VPCGatewayAttachment
-Transform: AWS::Serverless-2016-10-31
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Scheme: 'internet-facing'
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Subnets:
+        - !Ref PublicSubnetAz1
+        - !Ref PublicSubnetAz2
+      Type: 'application'
