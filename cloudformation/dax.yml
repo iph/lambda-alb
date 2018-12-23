@@ -74,9 +74,13 @@ Resources:
       GroupDescription: Security group
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
-          FromPort: '8111'
+          FromPort: '443'
           IpProtocol: tcp
-          ToPort: '8111'
+          ToPort: '443'
+        - CidrIp: 0.0.0.0/0
+          FromPort: '80'
+          IpProtocol: tcp
+          ToPort: '80'
       VpcId:
         Ref: VPC
     Type: AWS::EC2::SecurityGroup
